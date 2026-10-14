@@ -167,7 +167,7 @@ function layout(pid){const mc=document.createElement('canvas').getContext('2d');
     else c.y+=Math.round(small*0.6);
     if(clk)boxes.push({x:c.x-6,y:y0-6,w:c.w+12,h:h+12,act:'media',arg:i});
     if(open&&clk){const t=gig.type,mh=t==='carousel'?(Math.round(Math.min(H*0.5,380))+(gig.url?128:0)):t==='video'?Math.round(c.w*0.6):t==='gallery'?Math.round(c.w*0.34):t==='soundcloud'?130:48;
-      mediaRect={x:c.x,y:Math.round(c.y),w:c.w,h:mh};c.y+=mh+Math.round(small*1.2);}}
+      mediaRect={x:c.x,y:Math.round(c.y),w:c.w,h:mh,adv:mh+Math.round(small*1.2)};c.y+=mh+Math.round(small*1.2);}}
   function trackRow(c,tr,i){const y0=c.y,play=!tr.soon;mc.font="700 "+body+"px Archivo";
     const tri=play?'\u25B8  ':'';
     items.push({t:tri+tr.title,px:body,x:c.x,y:c.y,wt:700});
@@ -338,7 +338,13 @@ function build(pid){met();cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';c
   cur=stateFor(pid);ready=true;dirty=true;bindHot(cur.boxes);placeDom();}
 
 function _clipC(){const[ct,cb]=_win();ctx.save();ctx.beginPath();ctx.rect(0,ct,W,Math.max(20,cb-ct));ctx.clip();}
-let _fadeC=null;
+let _fadeC=null,_expC=null;
+function expandText(cc,tr,k){const w=cc.width,h=cc.height;if(!_expC||_expC.width!==w||_expC.height!==h){_expC=document.createElement('canvas');_expC.width=w;_expC.height=h;}
+  const c=_expC.getContext('2d'),sp=Math.round(tr.split*dpr),src=Math.round((tr.split+(tr.open?tr.adv:0))*dpr),dst=Math.round((tr.split+k*tr.adv)*dpr);
+  c.clearRect(0,0,w,h);c.drawImage(cc,0,0,w,sp,0,0,w,sp);if(h-src>0)c.drawImage(cc,0,src,w,h-src,0,dst,w,h-src);return _expC;}
+function drawPhotoBetween(op,np,e){if(!np||!np.crisp)return;const vy=r=>r.y+(r.flow?r.oy-scrollY:0),y0=op?vy(op):vy(np),y=Math.round(y0+(vy(np)-y0)*e),p=np.cpad||0;
+  ctx.save();ctx.beginPath();ctx.rect(0,_win()[0],W,H);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.drawImage(np.crisp,np.x-p,y-p,np.w+2*p,np.h+2*p);ctx.restore();ctx.imageSmoothingEnabled=false;}
 function drawContent(cc,off,alpha,pr){const[ct,cb]=_win(),w=Math.round(W*dpr),h=Math.round(H*dpr);
   if(!_fadeC||_fadeC.width!==w||_fadeC.height!==h){_fadeC=document.createElement('canvas');_fadeC.width=w;_fadeC.height=h;}
   const f=_fadeC.getContext('2d');f.setTransform(1,0,0,1,0,0);f.globalCompositeOperation='source-over';f.clearRect(0,0,w,h);f.setTransform(dpr,0,0,dpr,0,0);
@@ -409,6 +415,14 @@ function loop(now){curR+=(tgtR-curR)*0.16;if(WAVE&&WAVE.t0)dirty=true;
       drawContent(scrambleText(trans.n,t,trans.pox,trans.poy),scrollY,null,trans.n.photoRect);
       ctx.drawImage(trans.n.chromeCanvas,0,0,W,H);
       if(t>=1){cur=trans.n;bindHot(cur.boxes);trans=null;placeDom();dirty=true;}}
+    else if(trans.expand){const t=Math.min(1,(now-trans.s)/trans.d),e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2,k=trans.open?e:1-e,n=trans.n;
+      drawBase(n.base);
+      ctx.save();ctx.beginPath();ctx.rect(trans.bandX,trans.band,trans.bandW,H-trans.band);ctx.clip();drawBase(mframe(e));ctx.restore();
+      drawContent(expandText(n.contentCanvas,trans,k),scrollY,null,null);
+      drawPhotoBetween(trans.o.photoRect,n.photoRect,e);
+      ctx.drawImage(n.chromeCanvas,0,0,W,H);
+      mediaEl.style.clipPath='inset(0 0 '+Math.round((1-k)*trans.mrH)+'px 0)';
+      if(t>=1){mediaEl.style.clipPath='';cur=n;bindHot(cur.boxes);trans=null;morphing=false;placeDom();dirty=true;}}
     else if(trans.band!=null){const t=Math.min(1,(now-trans.s)/trans.d),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
       drawBase(trans.n.base);
       // lines morph in the band below the row; the photo and the text stay on top of it
@@ -435,7 +449,12 @@ function doAct(b,ev){if(b.act==='go')goto(b.arg,ev?ev.clientX:null,ev?ev.clientY
   else if(b.act==='theme'){if(!trans)toggleTheme(ev?ev.clientX:W-M,ev?ev.clientY:30);}
   else if(b.act==='url')window.open(b.arg,'_blank','noopener');
   else if(b.act==='bio'){const np=Math.max(0,Math.min(STR[lang].bio.length-1,b.arg));if(np!==bioPage&&!trans){bioPage=np;const nx=stateFor('about'),pox=ev?ev.clientX:W/2,poy=ev?ev.clientY:H/2;trans={o:cur,n:nx,s:performance.now(),d:600,textonly:true,pox,poy};tgtR=0;curR=0;}}
-  else if(b.act==='media'){openGig=(openGig===b.arg?null:b.arg);const nx=stateFor('live');document.getElementById('media').classList.remove('on');const mr=(nx.mediaRect||cur.mediaRect);const band=mr?Math.max(0,mr.y-8):0;const bandX=mr?Math.max(0,mr.x-12):0;const bandW=mr?mr.w+24:W;const pox=ev?ev.clientX:W/2,poy=ev?ev.clientY:H/2;trans={o:cur,n:nx,s:performance.now(),d:520,band,bandX,bandW,pox,poy};tgtR=0;curR=0;}}
+  else if(b.act==='media'){if(trans)return;openGig=(openGig===b.arg?null:b.arg);const o=cur,nx=stateFor('live'),om=o.mediaRect,nm=nx.mediaRect;
+    const mr=(nm||om),band=mr?Math.max(0,mr.y-8):0,bandX=mr?Math.max(0,mr.x-12):0,bandW=mr?mr.w+24:W,pox=ev?ev.clientX:W/2,poy=ev?ev.clientY:H/2;
+    if(om&&nm){document.getElementById('media').classList.remove('on');trans={o,n:nx,s:performance.now(),d:520,band,bandX,bandW,pox,poy};tgtR=0;curR=0;return;}
+    // open: the media is built now and unrolled while the rows below slide down; close: the reverse, then it is removed
+    const open=!!nm;if(open){mediaEl.style.clipPath='inset(0 0 100% 0)';cur=nx;placeDom();}
+    trans={o,n:nx,s:performance.now(),d:650,expand:true,open,split:mr.y,adv:mr.adv,mrH:mr.h,band,bandX,bandW,pox,poy};tgtR=0;curR=0;}}
 
 /* booking form (transparent, in cleared zone) */
 function buildForm(){const S=STR[lang],f=document.getElementById('bform');
