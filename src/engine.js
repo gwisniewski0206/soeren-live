@@ -226,16 +226,17 @@ function layout(pid){const mc=document.createElement('canvas').getContext('2d');
       photoRect=photoBlob(bx,by,bw,bh,pid);
       const dx=Math.round(W/2-(photoRect.x+photoRect.w/2)),dy=bottom-(photoRect.y+photoRect.h);
       if(Math.abs(dx)>=g||Math.abs(dy)>=g)photoRect=photoBlob(bx+dx,by+dy,bw,bh,pid);
+      const room=Math.round(28*K);if(pid!=='music'&&cbAll+room>photoRect.y-10){photoRect.flow=true;photoRect.oy=cbAll+room-photoRect.y;}
     }
     if(photoRect)photoRect.photo=PHOTOS[pid];
   }
-  const cb=(!wide&&photoRect)?photoRect.y-10:footY-4-pH;
+  const cb=(!wide&&photoRect&&!photoRect.flow)?photoRect.y-10:footY-4-pH;
   if(musicRect)musicRect.h=Math.max(Math.round(120*K),cb-musicRect.y-Math.round(6*K));
   const ff=Math.max(11,Math.round(Math.min(W,H)*0.02));
   items.push({t:"søren *live",px:ff,x:M,y:H-Math.round(Math.max(22,H*0.045)),wt:600,chrome:true});
   let contentH=topY;items.forEach(it=>{if(it.chrome)return;const b=it.h?it.y+it.h:it.y+(it.px||0);contentH=Math.max(contentH,b);});
   [formRect,mediaRect,musicRect].forEach(r=>{if(r)contentH=Math.max(contentH,r.y+(r.h||0));});
-  if(photoRect&&!wide)contentH=Math.max(contentH,photoRect.y+photoRect.h);
+  if(photoRect&&!wide)contentH=Math.max(contentH,photoRect.y+(photoRect.oy||0)+photoRect.h+(photoRect.flow?Math.round(16*K):0));
   return {items,boxes,formRect,mediaRect,galRect,photoRect,musicRect,playerRect,topY,cb,contentH};}
 function textOf(items){
   function draw(list){const c=document.createElement('canvas');c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);
@@ -337,11 +338,21 @@ function build(pid){met();cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';c
   cur=stateFor(pid);ready=true;dirty=true;bindHot(cur.boxes);placeDom();}
 
 function _clipC(){const[ct,cb]=_win();ctx.save();ctx.beginPath();ctx.rect(0,ct,W,Math.max(20,cb-ct));ctx.clip();}
-function drawContent(cc,off,alpha){_clipC();if(alpha!=null)ctx.globalAlpha=alpha;ctx.drawImage(cc,0,-off,W,H);ctx.globalAlpha=1;ctx.restore();}
+let _fadeC=null;
+function drawContent(cc,off,alpha,pr){const[ct,cb]=_win(),w=Math.round(W*dpr),h=Math.round(H*dpr);
+  if(!_fadeC||_fadeC.width!==w||_fadeC.height!==h){_fadeC=document.createElement('canvas');_fadeC.width=w;_fadeC.height=h;}
+  const f=_fadeC.getContext('2d');f.setTransform(1,0,0,1,0,0);f.globalCompositeOperation='source-over';f.clearRect(0,0,w,h);f.setTransform(dpr,0,0,dpr,0,0);
+  f.drawImage(cc,0,-off,W,H);
+  if(pr&&pr.flow&&pr.crisp){f.imageSmoothingEnabled=true;f.imageSmoothingQuality='high';const p=pr.cpad||0;f.drawImage(pr.crisp,pr.x-p,pr.y+pr.oy-off-p,pr.w+2*p,pr.h+2*p);}
+  // soft edge only on a side where there is more to scroll to
+  const F=Math.round(28*Math.min(1.3,Math.max(1,W/700))),a=Math.min(.45,F/Math.max(1,cb-ct)),gr=f.createLinearGradient(0,ct,0,cb);
+  gr.addColorStop(0,off>0?'rgba(0,0,0,0)':'#000');gr.addColorStop(a,'#000');gr.addColorStop(1-a,'#000');gr.addColorStop(1,off<maxScroll-1?'rgba(0,0,0,0)':'#000');
+  f.globalCompositeOperation='destination-in';f.fillStyle=gr;f.fillRect(0,0,W,H);f.globalCompositeOperation='source-over';
+  _clipC();if(alpha!=null)ctx.globalAlpha=alpha;ctx.drawImage(_fadeC,0,0,W,H);ctx.globalAlpha=1;ctx.restore();}
 function updateScroll(){const ty=(cur&&cur.topY?cur.topY:Math.round(H*0.11)),cb=_win()[1],avail=cb-ty;maxScroll=Math.max(0,(cur?cur.contentH:0)-ty-avail+Math.round(H*0.02));if(scrollY>maxScroll)scrollY=maxScroll;if(scrollY<0)scrollY=0;}
-function drawCrisp(pr){const p=pr.cpad||0;ctx.drawImage(pr.crisp,pr.x-p,pr.y-p,pr.w+2*p,pr.h+2*p);}
+function drawCrisp(pr){if(pr.flow)return;const p=pr.cpad||0;ctx.drawImage(pr.crisp,pr.x-p,pr.y-p,pr.w+2*p,pr.h+2*p);}
 function drawIdle(){ctx.imageSmoothingEnabled=false;drawBase(cur.base);drawWaveLines();const pr=cur.photoRect;
-  _clipC();ctx.drawImage(cur.contentCanvas,0,-scrollY,W,H);ctx.restore();
+  drawContent(cur.contentCanvas,scrollY,null,pr);
   if(pr&&pr.crisp){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';drawCrisp(pr);ctx.imageSmoothingEnabled=false;}
   ctx.drawImage(cur.chromeCanvas,0,0,W,H);}
 function mframe(gt){const N=cw*ch,o=trans.o,n=trans.n,rad=trans.radial;
@@ -370,7 +381,7 @@ function drawBlobMorph(pr,gt,tr,dir){if(!pr||!pr.pgrid)return;const gw=pr.gw,gh=
     if(edge&&!SMOOTH){o[i*4]=RUST[0];o[i*4+1]=RUST[1];o[i*4+2]=RUST[2];o[i*4+3]=255;}
     else{o[i*4]=src[i*4];o[i*4+1]=src[i*4+1];o[i*4+2]=src[i*4+2];o[i*4+3]=255;}}
   cc.putImageData(cd,0,0);const pe=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(c,0,0,gw,gh,gx0*g,gy0*g,gw*g,gh*g);ctx.imageSmoothingEnabled=pe;
+  ctx.drawImage(c,0,0,gw,gh,gx0*g,gy0*g+(pr.flow?pr.oy-scrollY:0),gw*g,gh*g);ctx.imageSmoothingEnabled=pe;
   if(SMOOTH&&pr.path){const dx=gx0+gw/2-ox,dy=gy0+gh/2-oy;let q=(gt-Math.sqrt(dx*dx+dy*dy)/md*SPREAD)/RAMP;q=q<0?0:q>1?1:q;
     const p=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2,a=dir>0?p:1-p;if(a<=0.01)return;
     ctx.save();ctx.globalAlpha=a;ctx.beginPath();pr.path.forEach(([X,Y],i)=>i?ctx.lineTo(X,Y):ctx.moveTo(X,Y));ctx.closePath();
@@ -395,7 +406,7 @@ function loop(now){curR+=(tgtR-curR)*0.16;if(WAVE&&WAVE.t0)dirty=true;
     if(trans.textonly){const t=Math.min(1,(now-trans.s)/trans.d);
       drawBase(trans.n.base);
       if(trans.n.photoRect&&trans.n.photoRect.crisp){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';drawCrisp(trans.n.photoRect);ctx.imageSmoothingEnabled=false;}
-      drawContent(scrambleText(trans.n,t,trans.pox,trans.poy),scrollY);
+      drawContent(scrambleText(trans.n,t,trans.pox,trans.poy),scrollY,null,trans.n.photoRect);
       ctx.drawImage(trans.n.chromeCanvas,0,0,W,H);
       if(t>=1){cur=trans.n;bindHot(cur.boxes);trans=null;placeDom();dirty=true;}}
     else if(trans.band!=null){const t=Math.min(1,(now-trans.s)/trans.d),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
@@ -403,13 +414,13 @@ function loop(now){curR+=(tgtR-curR)*0.16;if(WAVE&&WAVE.t0)dirty=true;
       // lines morph in the band below the row; the photo and the text stay on top of it
       ctx.save();ctx.beginPath();ctx.rect(trans.bandX,trans.band,trans.bandW,H-trans.band);ctx.clip();drawBase(mframe(e));ctx.restore();
       if(trans.n.photoRect&&trans.n.photoRect.crisp){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';drawCrisp(trans.n.photoRect);ctx.imageSmoothingEnabled=false;}
-      drawContent(scrambleText(trans.n,t,trans.pox,trans.poy),scrollY);
+      drawContent(scrambleText(trans.n,t,trans.pox,trans.poy),scrollY,null,trans.n.photoRect);
       ctx.drawImage(trans.n.chromeCanvas,0,0,W,H);
       if(t>=1){cur=trans.n;bindHot(cur.boxes);trans=null;morphing=false;placeDom();dirty=true;}}
     else{const nt=(now-trans.s)/trans.d;drawBase(mframe(nt));
       drawBlobMorph(trans.o&&trans.o.photoRect,nt,trans,-1);drawBlobMorph(trans.n&&trans.n.photoRect,nt,trans,1);
       const oa=Math.max(0,1-nt*2.4);if(oa>0)drawContent(trans.o.contentCanvas,scrollY,oa);
-      drawContent(scrambleText(trans.n,nt,trans.pox,trans.poy),scrollY);
+      drawContent(scrambleText(trans.n,nt,trans.pox,trans.poy),scrollY,null,trans.n.photoRect);
       ctx.drawImage(trans.n.chromeCanvas,0,0,W,H);
       if(nt>=1.05){settle=SMOOTH?null:{n:trans.n,s:now,d:300};cur=trans.n;bindHot(cur.boxes);trans=null;morphing=false;placeDom();dirty=true;}}}
   else if(settle){const t=Math.min(1,(now-settle.s)/settle.d);if(ready){drawIdle();ctx.globalAlpha=1-t;drawBlobMorph(settle.n.photoRect,3,{ox:0,oy:0,maxD:1,chaos:null},1);ctx.globalAlpha=1;}if(t>=1){settle=null;dirty=true;}requestAnimationFrame(loop);return;}
@@ -486,7 +497,9 @@ function wireCarousel(n){const sc=mediaEl.querySelector('.cscroll');if(!sc)retur
   if(next)next.onclick=()=>sc.scrollBy({left:sc.clientWidth,behavior:'smooth'});}
 function _win(){const ct=(cur&&cur.topY?cur.topY-6:Math.round(H*0.11)),cb=(cur&&cur.cb)||(H-Math.round(Math.max(22,H*0.045))-4);return[ct,cb];}
 function _clipDom(el){const[ct,cb]=_win(),t=parseFloat(el.style.top)||0,h=el.offsetHeight;
-  el.style.clipPath='inset('+Math.max(0,ct-t)+'px -40px '+Math.max(0,t+h-cb)+'px -40px)';}
+  const F=Math.round(28*Math.min(1.3,Math.max(1,W/700))),a=ct-t,b=cb-t,ft=scrollY>0?F:0,fb=scrollY<maxScroll-1?F:0;
+  const m='linear-gradient(to bottom,transparent '+a+'px,#000 '+(a+ft)+'px,#000 '+(b-fb)+'px,transparent '+b+'px)';
+  el.style.webkitMaskImage=m;el.style.maskImage=m;}
 function placeDom(){const f=document.getElementById('bform');updateScroll();
   // form
   if(page==='booking'&&cur&&cur.formRect){const r=cur.formRect;f.style.left=r.x+'px';f.style.top=(r.y-scrollY)+'px';f.style.width=r.w+'px';f.classList.add('on');_clipDom(f);if(f._w!==r.w){f._w=r.w;requestAnimationFrame(renderFormFrame);}}else f.classList.remove('on');
