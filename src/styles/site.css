@@ -63,6 +63,7 @@ body{background:var(--concrete);overflow:hidden;cursor:default;-webkit-user-sele
 .tcard{position:relative;display:flex;align-items:center;gap:calc(12px*var(--k));height:calc(58px*var(--k));cursor:pointer;outline:none}
 .tcard+.tcard{border-top:1px dashed rgba(var(--ink),.35)}
 .tcard .pp{position:relative;width:calc(28px*var(--k));height:calc(28px*var(--k));flex:none}
+.tcard .pp canvas.frame{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 .tcard .tmain{flex:1;min-width:0}
 .tcard .tt{font-weight:800;font-size:calc(15px*var(--k));letter-spacing:.01em;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--rust)}
 .tcard .ts{font-weight:700;font-size:calc(11px*var(--k));color:var(--rust-d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

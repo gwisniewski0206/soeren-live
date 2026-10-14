@@ -337,11 +337,11 @@ function build(pid){met();cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';c
   cur=stateFor(pid);ready=true;dirty=true;bindHot(cur.boxes);placeDom();}
 
 function _clipC(){const[ct,cb]=_win();ctx.save();ctx.beginPath();ctx.rect(0,ct,W,Math.max(20,cb-ct));ctx.clip();}
-function drawContent(cc,off,alpha){_clipC();if(alpha!=null)ctx.globalAlpha=alpha;ctx.drawImage(cc,0,-off);ctx.globalAlpha=1;ctx.restore();}
+function drawContent(cc,off,alpha){_clipC();if(alpha!=null)ctx.globalAlpha=alpha;ctx.drawImage(cc,0,-off,W,H);ctx.globalAlpha=1;ctx.restore();}
 function updateScroll(){const ty=(cur&&cur.topY?cur.topY:Math.round(H*0.11)),cb=_win()[1],avail=cb-ty;maxScroll=Math.max(0,(cur?cur.contentH:0)-ty-avail+Math.round(H*0.02));if(scrollY>maxScroll)scrollY=maxScroll;if(scrollY<0)scrollY=0;}
 function drawCrisp(pr){const p=pr.cpad||0;ctx.drawImage(pr.crisp,pr.x-p,pr.y-p,pr.w+2*p,pr.h+2*p);}
 function drawIdle(){ctx.imageSmoothingEnabled=false;drawBase(cur.base);drawWaveLines();const pr=cur.photoRect;
-  _clipC();ctx.drawImage(cur.contentCanvas,0,-scrollY);ctx.restore();
+  _clipC();ctx.drawImage(cur.contentCanvas,0,-scrollY,W,H);ctx.restore();
   if(pr&&pr.crisp){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';drawCrisp(pr);ctx.imageSmoothingEnabled=false;}
   ctx.drawImage(cur.chromeCanvas,0,0,W,H);}
 function mframe(gt){const N=cw*ch,o=trans.o,n=trans.n,rad=trans.radial;
