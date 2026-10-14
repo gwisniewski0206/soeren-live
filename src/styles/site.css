@@ -126,4 +126,8 @@ body{background:var(--concrete);overflow:hidden;cursor:default;-webkit-user-sele
 .csnd.on,.csnd:hover{background:var(--rust);color:var(--concrete)}
 .cidx{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);z-index:2;font-weight:700;font-size:10px;letter-spacing:.12em;color:var(--rust);background:rgba(var(--paper),.75);padding:3px 8px}
 
+/* theme switch: engine.js clips the new state to an organic, growing path frame by frame; this only holds the transition open */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){animation:vthold 1.9s linear both}
+@keyframes vthold{from{opacity:1}to{opacity:1}}
 .seo{position:absolute!important;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
