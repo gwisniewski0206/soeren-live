@@ -1,0 +1,7 @@
+---
+import Base from '../layouts/Base.astro';
+import { RECORDINGS, line, esc, base } from '../lib/catalogue.js';
+const seo = `<h1>søren *live — music</h1><p>live sets and releases by søren, rangø and sven miesner.</p><ul>`
+  + RECORDINGS.map(t => `<li><a href="${base}/music/${t.id}">${esc(line(t))}</a></li>`).join('') + `</ul>`;
+---
+<Base title="music — søren *live" description="søren *live — live sets and releases by søren, rangø and sven miesner. Listen in the browser." seoText={seo} />

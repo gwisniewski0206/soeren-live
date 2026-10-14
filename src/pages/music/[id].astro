@@ -1,0 +1,15 @@
+---
+import Base from '../../layouts/Base.astro';
+import { RECORDINGS, line, esc, base } from '../../lib/catalogue.js';
+import { place } from '../../lib/music.js';
+export function getStaticPaths() {
+  return RECORDINGS.map(t => ({ params: { id: t.id }, props: { t } }));
+}
+const { t } = Astro.props;
+const kind = t.type === 'live' ? 'live set' : 'single';
+const where = place(t);
+const seo = `<h1>${esc(t.title)}</h1><p>${esc(line(t))}</p><p><a href="${base}/music">all music</a></p>`;
+---
+<Base title={`${t.title} — ${t.artist} · søren *live`}
+  description={`${t.artist} — ${kind}${where ? ' at ' + where : ''}, ${t.year}. Listen on soeren.live.`}
+  ogType="music.song" seoText={seo} />

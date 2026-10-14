@@ -1,0 +1,17 @@
+{
+  "name": "soeren-live",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "audio": "node scripts/audio.mjs"
+  },
+  "dependencies": {
+    "@fontsource/archivo": "^5.1.0",
+    "astro": "^5.6.0",
+    "hls.js": "1.5.20"
+  }
+}

@@ -1,0 +1,40 @@
+---
+import '@fontsource/archivo/600.css';
+import '@fontsource/archivo/700.css';
+import '@fontsource/archivo/800.css';
+import '../styles/site.css';
+const { title, description, seoText, ogType = 'website' } = Astro.props;
+const nav = [['/', 'start'],['/bio','bio'],['/live','live'],['/music','music'],['/booking','booking']];
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={Astro.url.href} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={ogType} />
+<meta name="theme-color" content="#f0f0ef" />
+<script is:inline>/* theme before first paint: saved choice, else the system setting */
+try{var t=localStorage.getItem('soeren.theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head>
+<body>
+<canvas id="art"></canvas><div id="hot"></div>
+<form id="bform" autocomplete="on"></form>
+<div id="media"></div><div id="gallery"></div><div id="music"></div>
+<div id="player" data-seed="playerbar" role="region" aria-label="player"><canvas class="frame"></canvas>
+  <div class="pqueue" id="pQ"></div>
+  <div class="prow"><button class="pbtn" id="pPrev" aria-label="previous"></button><button class="pbtn big" id="pPlay" aria-label="play / pause"></button><button class="pbtn" id="pNext" aria-label="next"></button>
+    <div class="pmeta"><div class="pt" id="pTitle"></div><div class="pa" id="pArtist"></div></div>
+    <button class="pqb" id="pQBtn" aria-controls="pQ" aria-expanded="false"></button><button class="pcl" id="pClose" aria-label="close player">×</button></div>
+  <div class="pwrow"><span class="ptm" id="pEl">0:00</span><canvas class="pwave" id="pWave" aria-label="seek"></canvas><span class="ptm" id="pDur">0:00</span></div>
+</div>
+<div class="seo" set:html={seoText}></div>
+<nav class="seo" aria-label="pages">{nav.map(([h,l]) => (<a href={base + h}>{l}</a>))}</nav>
+<script>import '../engine.js';</script>
+</body>
+</html>

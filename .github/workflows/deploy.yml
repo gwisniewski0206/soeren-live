@@ -1,0 +1,62 @@
+# Build the Astro site and publish it with GitHub Pages.
+# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+# Audio is not encoded here: public/audio/ and src/data/audio.json are committed (npm run audio, locally).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# never cancel a deploy half-way; a newer push waits for the running one
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # base_path is "/<repo>" on <user>.github.io/<repo>, "" once a custom domain is set in Settings → Pages
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - run: npm ci
+
+      - run: npm run build
+        env:
+          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}/
+
+      # GitHub Pages caps a published site at 1 GB; fail here with a clear number instead of at deploy
+      - name: check site size
+        run: |
+          size=$(du -sm dist | cut -f1)
+          echo "site size: ${size} MB of 1024 MB"
+          if [ "$size" -gt 1000 ]; then echo "::error::dist is ${size} MB — GitHub Pages allows 1 GB per site"; exit 1; fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
